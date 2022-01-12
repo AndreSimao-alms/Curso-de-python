@@ -6,5 +6,5 @@ Disponível em <https://www.youtube.com/c/EdenirPereiraFilho>.
 ### CONTEÚDO DAS AULAS 
 - Aula 0: Apresentação do curso e instruções de acesso.
 - Aula 1: Variáveis, operadores matemáticos e função print() e input()
-- Aula 2 - Comandos de decisão e lógicos 
-- Aula 3 - laços de repetição e range 
+- Aula 2: Comandos de decisão e lógicos 
+- Aula 3: Laços de repetição e range()
