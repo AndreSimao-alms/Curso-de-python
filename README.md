@@ -23,3 +23,7 @@ Disponível em <https://www.youtube.com/c/EdenirPereiraFilho>.
 - Aula 1 | Parte 9- Função input() 2
 - Aula 1 | Parte 10- Desafio 1
 - Aula 1 | Parte 11- Desafio 2
+- Aula 2 | Parte 1 - Comando if, elif e else
+- Aula 2 | Parte 2 - Exemplo 3: equação polinomial de segundo grau
+- Aula 2 | Parte 3 - Desafio 1
+- Aula 2 | Parte 4 - Desafio 2
