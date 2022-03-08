@@ -3,7 +3,18 @@
 ## Publicado no canal do You Tube do Prof.Dr.Edenir Pereira Filho.
 Disponível em <https://www.youtube.com/c/EdenirPereiraFilho>.
 
-### CONTEÚDO DAS AULAS 
+# Contato para dúvidas 
+
+<div>
+  <a href = "mailto:alms.simao@gmail.com"><img src="https://img.shields.io/badge/-Gmail-%23333?style=for-the-badge&logo=gmail&logoColor=white" target="_blank"></a>
+  
+  <a href="https://www.linkedin.com/in/almssimao/" target="_blank"><img src="https://img.shields.io/badge/-LinkedIn-%230077B5?style=for-the-badge&logo=linkedin&logoColor=white" target="_blank"></a> 
+</div>
+
+##
+
+# CONTEÚDO DO CURSO
+## CONTEÚDO DAS AULAS 
 - Seção 0: Apresentação do curso e instruções de acesso.
 - Seção 1: Variáveis, operadores matemáticos e função print() e input()
 - Seção 2: Comandos de decisão e lógicos 
@@ -11,7 +22,7 @@ Disponível em <https://www.youtube.com/c/EdenirPereiraFilho>.
 - Seção 4: Funções e Módulos
 - Seção 5: Aplicação Química - Titulação Potenciométrica
 
-### CONTEÚDO DOS VÍDEOS 
+## CONTEÚDO DOS VÍDEOS 
 <pre>- Vídeo 1:    Seção 0 | Parte 1     Apresentação do curso
 - Vídeo 2:    Seção 0 | Parte 2     Instalação da plataforma Jupyter Notebook e preparo de variáveis de ambiente
 - Vídeo 3:    Seção 1 | Parte 1     Variável int e float e o uso da função type()
@@ -59,3 +70,5 @@ Disponível em <https://www.youtube.com/c/EdenirPereiraFilho>.
 - Vídeo 45:   Seção 5 | Parte 12    Interpolação linear em Python
 - Vídeo 46:   Seção 5 | Parte 13    Regressão linear em Python 
 - Vídeo 46:   Seção 5 | Parte 14    Conversão de dataframe para excel<pre>
+
+
