@@ -1,19 +1,17 @@
-# Função -> aghata_efeito (fabi_efeito)
-
-#Função adaptada do "fabi_efeito" utilizada no Octave pertencente ao Prof.Dr.Edenir Pereira Filho para o Python**\
-#Canal do Youtube: https://www.youtube.com/c/EdenirPereiraFilho
-
-#Funcao para calcular efeito de planejamento fatorial\
-#X = matriz contendo os efeitos que serão calculados\
-#y = vetor contendo a resposta\
-#erro_efeito=erro de um efeito. Sera 0 se nao forem feitas replicas\
-#t=valor de t correspondente ao número de graus de liberdade do erro de um efeito. Sera 0 se nao forem feitas replicas.
+#class Fabi_efeito
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+#class CP
+from scipy.stats import t
+#class Regression2
+import math
+from scipy.stats import f
+from tabulate import tabulate
+from matplotlib.backends.backend_pdf import PdfPages
+#class Super_fabi
 
 class Fabi_efeito:
     
@@ -194,29 +192,282 @@ class CP:
     
     erro_efeito: retorna erro de um efeito.
     
-    Return
-    -----------
+    SSPE: retorna o valor da Soma Quadrática do Erro Puro
     
-    tuple -> (erro_efeito, t)
-    
+    df_SSPE: retorna os graus de liberdade da Soma Quadrática do Erro Puro
+
     
     """
-    def __init__(self,y, k):
+    def __init__(self,y=None , k=None):
         self.y = y
         self.k = k
         
-    def __array(self):
+    def __array(self): 
         return self.y.values
     
     def __erro_exp(self):
         return self.y.std()
     
-    def __gl(self):
+    def __df(self):
+        """Calcula valor de t da distribuição bimodal t-Student"""
         return self.y.shape[0]-1
     
-    def invt(self):
-        return t.ppf(1-.05/2,self.__gl())
+    def __verificar_df(self):
+        return 
     
-    def erro_efeito(self):
+    def invt(self, df_a = None):
+        """
+        Retorna t-value da distribuição bimodal t_Student.
+        
+        Parameters
+        -----------
+        
+        (optional) df_a:grau de liberdade que não pertence à classe CP.
+        
+        Returns:
+        
+        t-value type float
+        
+        """
+        if (df_a == None):
+            return t.ppf(1-.05/2,self.__df())
+        else:
+            return t.ppf(1-.05/2,df_a)
+        
+    def __mensagem_erro_11(self):
+        return print('Erro11: Parâmetros inválidos.')
+    
+    def __calcular_erro_efeito(self):
         return 2*self.__erro_exp()/(self.y.shape[0]*2**self.k)**0.5
     
+    def erro_efeito(self):
+        """Retorna o valor de erro de um efeito"""
+        if self.k == None or self.y == None:
+            return self.__mensagem_erro_11()
+        else:
+            return self.__calcular_erro_efeito()
+    
+    def __calcular_SSPE(self):
+     
+        return np.sum((self.__array() - np.mean(self.__array()))**2)
+    
+    def SSPE(self):     
+        """Retorna o valor da Soma Quadrática do Erro Puro"""
+        if self.y.all() == None:
+            return self.__mensagem_erro_11()
+        else:
+            return self.__calcular_SSPE()
+    
+    def  df_SSPE(self):
+        """Retorna os graus de liberdade da SSPE."""
+        return len(self.y)
+
+
+class Regression2:
+    def __init__(self, X, y, SSPE=None, df=None):
+        self.X = X 
+        self.y = y
+        self.SSPE = SSPE
+        self.df = df 
+     
+    
+    def __n_exp(self):
+        return  X.shape[0]
+    
+    def __n_coef(self):
+        return X.shape[1]
+    
+    def __matrix_X(self):
+        return self.X.values 
+    
+    def __array_y(self):
+        return self.y.values
+    
+    def __calculate_var_coefs(self):
+        """
+        Retorna valores de variâncias dos coeficientes
+        
+        Equação aplicada: diag(inv(X'*X))
+        """
+        return np.diagonal(np.linalg.inv(np.matmul(self.__matrix_X().T,self.__matrix_X()))).round(3)
+    
+    def __calculate_matrix_coef(self):
+        """
+        Retorna uma matriz com o resultado da equação abaixo:
+        
+        b = inv(X'*X))*(X'*Y)
+        """
+        return np.matmul(np.linalg.inv(np.matmul(self.__matrix_X().T,self.__matrix_X())),
+                         self.__matrix_X().T*self.__array_y()).T
+    
+    def __calculate_coefs(self):
+        """Retorna a soma dos resultado da definição "__matrix_coef" """
+        return np.einsum('ij->j', self.__calculate_matrix_coef()).round(2)
+    
+    def __calculate_pred_values(self):
+        """Retorna os valores previstos pelo modelo"""
+        return np.matmul(self.X,self.__calculate_coefs())
+    
+    def __calculate_residuals(self):
+        """Retorna o valor dos resíduos dos valores previstos"""
+        return self.__array_y()-self.__calculate_pred_values()
+    
+    # Sum of Squares - Part 1
+    
+    def __calculate_SSreg(self):
+        return np.sum((self. __calculate_pred_values()-self.__array_y().mean())**2).round(2)
+    
+    def __calculate_SSres(self):
+        return np.sum(self.__calculate_residuals()**2).round(2)
+
+    def __calculate_SSTot(self):
+        return np.sum(self.__calculate_SSreg()+self.__calculate_SSres())
+    
+    def __calculate_SSLoF(self):
+        return self.__calculate_SSres()-self.SSPE
+    
+    def __calculate_R2(self):  
+        return self.__calculate_SSreg()/self.__calculate_SSTot()
+        
+    def __calculate_R2_max(self):
+        return (self.__calculate_SSTot()-self.SSPE)/self.__calculate_SSTot()
+        
+    def __calculate_R(self):
+        return self.__calculate_R2()**.5
+    
+    def __calculate_R_max(self):
+        return self.__calculate_R2_max()**0.5
+    
+
+    # Sum of Squares - Part 2 (deggres of freedom)
+    
+    def __df_SSreg(self):
+        return self.__n_coef()-1
+    
+    def __df_SSres(self):
+        return self.__n_exp()-self.__n_coef()
+    
+    def __df_SSTot(self):
+        return self.__n_exp()-1
+    
+    def __df_SSLof(self):
+        return (self.__n_exp()-self.__n_coef())-self.df
+    
+    # Mean of Squares - Part 3
+    
+    def __calculate_MSreg(self):
+        return self.__calculate_SSreg()/self.__df_SSreg()
+    
+    def __calculate_MSres(self):
+        return self.__calculate_SSres()/self.__df_SSres()
+    
+    def __calculate_MSTot(self):
+        return self.__calculate_SSTot()/self.__df_SSTot()
+    
+    def __calculate_MSPE(self):
+        return self.SSPE/self.df
+    
+    def __calculate_MSLoF(self):
+        return self.__calculate_SSLoF()/self.__df_SSLof()
+    
+    # F Tests
+    
+    def __ftest1(self):
+        return self.__calculate_MSreg()/self.__calculate_MSres()
+    
+    def __ftest2(self):
+        return self.__calculate_MSLoF()/self.__calculate_MSPE()
+    
+    # F table
+    
+    def __ftable(self): 
+        return f.ppf(.95, self.__df_SSreg(),self.__df_SSres()) #F tabelado com 95% de confiança
+    
+    # ANOVA Table
+    def __anova_list(self):
+        """Formatação da tabela ANOVA"""
+        return [
+        ['\033[1m'+'Parâmetro','Soma Quadrática (SQ)','Graus de Liberdade(GL)','Média Quadrática (MQ)','Teste F1'+'\033[0m'],
+        ['\033[1mRegressão:\033[0m','%.0f'%self.__calculate_SSreg(),self.__df_SSreg(),'%.0f'%self.__calculate_MSreg(),'%.1f'%self.__ftest1() ],
+        ['\033[1mResíduo:\033[0m', '%.1f'%self.__calculate_SSres(), self.__df_SSres(),'%.2f'%self.__calculate_MSres(),'%.1f'%self.__ftest1()],
+        ['\033[1mTotal:\033[0m', '%.0f'%self.__calculate_SSTot(), self.__df_SSTot(), '%.0f'%self.__calculate_MSTot(), '\033[1mTeste F2\033[0m'],
+        ['\033[1mErro puro:\033[0m','%.2f'%self.SSPE, self.df, '%.2f'%self.__calculate_MSPE(), '%.2f'%self.__ftest2() ],
+        ['\033[1mFalta de Ajuste:\033[0m', '%.2f'%self.__calculate_SSLoF(), self.__df_SSLof(), '%.2f'%self.__calculate_MSLoF(), '%.2f'%self.__ftest2()],
+        ['\033[1mR²:\033[0m', '%.4f'%self.__calculate_R2(), '\033[1mR:\033[0m', '%.4f'%self.__calculate_R(),  '\033[1mF Tabelado\033[0m'],
+        ['\033[1mR² máximo:\033[0m','%.4f'%self.__calculate_R2_max(), '\033[1mR máximo:\033[0m', '%.4f'%self.__calculate_R_max(),'%.0f'%CP(y=self.y).SSPE()]
+        ]
+        
+    def create_table(self):
+        print('{:^110}'.format('\033[1m'+'TABELA ANOVA'+'\033[0m'))
+        print('-='*51)
+        print(tabulate(self.__anova_list(),tablefmt="grid"))
+        print('-='*51)
+        
+    #Data visualization 
+    
+    def plotar_grafico(self):
+        fig = plt.figure(constrained_layout=True,figsize=(10,10))
+        subfigs = fig.subfigures(2, 2, wspace=0.07, width_ratios=[1.4, 1.])
+        spec = fig.add_gridspec(ncols=2, nrows=2)
+
+        #Mean of Squares (Médias Quadraticas)
+        axs0 = subfigs[0,0].subplots(2, 2)
+
+        axs0[0,0].bar('MSReg',self.__calculate_MSreg(),color='darkgreen' ,)
+        axs0[0,0].set_title('MQ da Regressão',fontweight='black')
+        axs0[0,0].text(-.35, 100, '%.1f'%self.__calculate_MSreg(), fontsize=20,color='white')
+
+        axs0[0,1].bar('MSRes e t',self.__calculate_MSres(),color='darkorange')
+        axs0[0,1].set_title('MQ ds Resíduos',fontweight='black')
+        axs0[0,1].text(-.35, 2.5, '%.1f'%self.__calculate_SSres(), fontsize=20,color='k')
+        axs0[0,1].text(-.35, 1.07, '%.4f'%CP().invt(self.__df_SSres()), fontsize=20,color='k')
+
+        axs0[1,0].bar('MSPE',3, color= 'darkred')
+        axs0[1,0].set_title('MQ do Erro Puro',fontweight='black')
+        axs0[1,0].text(-.35, 1.27,'%.2f'%self.__calculate_MSPE(), fontsize=20,color='w')
+
+        axs0[1,1].bar('MSLoF e t',3,color= 'darkviolet')
+        axs0[1,1].set_title('MQ da Falta de Ajuste',fontweight='black')
+        axs0[1,1].text(-.35, 1.98, '%.1f'%self.__calculate_MSLoF(), fontsize=20,color='w')
+        axs0[1,1].text(-.35, 1.07, '%.4f'%CP().invt(self.__df_SSLof()), fontsize=20,color='w')
+
+        
+        #F2 tests (testes F)
+        axs1 = subfigs[0,1].subplots(1, 3)
+
+        axs1[0].bar('MSLof/MSPE',self.__ftest2(),color='darkred' ,)
+        axs1[0].set_title('Teste F2',fontweight='black')
+
+        axs1[1].bar('F2',self.__ftest2(),color='darkred')
+        axs1[1].set_title('F tabelado',fontweight='black')
+
+        axs1[2].bar('F2calc/ Ftable',self.__ftest2()/self.__ftable(), color= 'darkred')
+        axs1[2].set_title(r'$\bf\frac{F2_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)
+        axs1[2].axhline(1,color='black')
+
+        #F1 tests (testes F)
+        axs2 = subfigs[1,0].subplots(1, 3)
+
+        axs2[0].bar('MSReg/MSRes',2,color='navy' ,)
+        axs2[0].set_title('Teste F1',fontweight='black')
+
+        axs2[1].bar('F1',3,color='navy')
+        axs2[1].set_title('F1 tabelado',fontweight='black')
+
+        axs2[2].bar('F1calc/ Ftable',self.__ftest1()/self.__ftable(), color= 'navy')
+        axs2[2].set_title(r'$\bf\frac{F1_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)#F1 calculado/\nF1 tabelado
+        axs2[2].axhline(1,color='w')
+
+        axs3 = subfigs[1,1].subplots(1, 2)
+        axs3[0].bar('R²',self.__calculate_R2(),color='dimgray' ,)
+        axs3[0].set_title('Variação explicada',fontweight='black')
+        axs3[0].axhline(1,color='k')
+        
+        axs3[1].bar('R² max',self.__calculate_R2_max(),color='dimgray')
+        axs3[1].set_title('Máxima\n variação explicada',fontweight='black')
+        axs3[1].axhline(1,color='k')
+        
+        fig.suptitle('Tabela ANOVA (Analisys of Variance)', fontsize=20, fontweight='black',y=1.05)
+        plt.savefig('regression2_graficos_anova.pdf')
+
+        return plt.show()
