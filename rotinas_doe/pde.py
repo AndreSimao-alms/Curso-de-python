@@ -7,23 +7,24 @@ import seaborn as sns
 #class CP
 from scipy.stats import t
 #class Regression2
-import math
 from scipy.stats import f
+from scipy.stats import linregress
 from tabulate import tabulate
 from matplotlib.backends.backend_pdf import PdfPages
+import sys
 #class Super_fabi
 
 class Fabi_efeito:
     
     """
-    Classe -> Fabi_efeito(X,y,erro_efeito,t)
+    Classe -> Fabi_efeito(X,y,erro_efeito,t) - Classe para calcular efeito de planejamento fatorial.
     
     Instancie esta classe para acessar os seguintes métodos: grafico_probabilidades(), porcentagem_efeitos(), fabi_efeito().
     
     Rotina adaptada do "fabi_efeito" utilizada no Octave pertencente ao Prof.Dr.Edenir Pereira Filho para o Python.
     Canal do Youtube: https://www.youtube.com/c/EdenirPereiraFilho
     
-    Parameters
+    Atributes
     -----------
     
     X: matriz contendo os efeitos que serão calculados.
@@ -150,8 +151,8 @@ class Fabi_efeito:
 
     def fabi_efeito(self):
         """
-        Função -> aghata_efeito (fabi_efeito)
-        Funcao para calcular efeito de planejamento fatorial
+        Função -> fabi_efeito
+        Função para calcular efeito de planejamento fatorial
         
         Função adaptada do "fabi_efeito" utilizada no Octave pertencente ao Prof.Dr.Edenir Pereira Filho para o Python**
         Canal do Youtube: https://www.youtube.com/c/EdenirPereiraFilho
@@ -173,12 +174,13 @@ class Fabi_efeito:
         """
         return plt.show(self.__graficos_fabi_efeito())
 
+    
 class CP:
     """
-    Classe CP: responsável por calcular valor t e erro de um efeito
+    Classe -> CP(y, k) - responsável por calcular valor t e erro de um efeito.
     
     
-    Parameters
+    Atributes
     -----------
     
     y: pd.Series - valores dos sinais da região do ponto central.
@@ -262,14 +264,53 @@ class CP:
         """Retorna os graus de liberdade da SSPE."""
         return len(self.y)
 
-
 class Regression2:
+    """
+   Classe -> Regression2(X, y, SSPE, df) - Cria um modelo de regressão e realiza ajuste do mesmo através de Analisys of Variance
+       
+   Função adaptada do "fabi_efeito" utilizada no Octave pertencente ao Prof.Dr.Edenir Pereira Filho para o Python**
+   Canal do Youtube: https://www.youtube.com/c/EdenirPereiraFilho
+       
+   Essa rotina tem como finalidade calcular modelos de regressão empregando a seguinte equação:
+        
+   $inv(X^tX)X^ty$
+
+
+   Atributes
+   -----------
+       
+   X = matriz com os coeficientes que serao calculados (type: andas.Dataframe)
+        
+   y = resposta que sera modelada (pandas.Series)
+        
+   SSPE = Soma Quadrática do Erro Puro dos valores do ponto Central (type: float or int) 
+   -> Utilize pde.CP(yc).SSPE() para calcular) --> help(pde.CP.SSPE) para
+        
+   df = Graus de liberdade do ponto central (type: int)
+   -> Utilize pde.CP(yc,k).df_SSPE() --> help(pde.CP.df_SSPE)
+        
+   Methods
+   -----------
+        
+   create_table_anova: retorna tabela ANOVA do modelo criado (type: NoneType)
+   --> help(pde.Regression2.create_table_anova)
+    
+   plot_graphs_anova: retorna gráficos com os parâmetros da Tabela ANOVA (type: NoneType)
+   --> help(pde.Regression2.plot_graphs_anova)
+        
+   plot_graphs_regression: retorna gráficos do modelo de regressão (type: NoneType)
+   --> help(pde.Regression2.plot_graphs_regression)
+        
+   regression2: função mestre que cria um modelo de regressão e realiza ajuste do mesmo através de Analisys of Variance
+   --> help(pde.Regression2.regression2) 
+    """
+        
+        
     def __init__(self, X, y, SSPE=None, df=None):
         self.X = X 
         self.y = y
         self.SSPE = SSPE
         self.df = df 
-     
     
     def __n_exp(self):
         return  X.shape[0]
@@ -397,18 +438,47 @@ class Regression2:
         ['\033[1mR² máximo:\033[0m','%.4f'%self.__calculate_R2_max(), '\033[1mR máximo:\033[0m', '%.4f'%self.__calculate_R_max(),'%.0f'%CP(y=self.y).SSPE()]
         ]
         
-    def create_table(self):
+    def create_table_anova(self):
+        """Retorna Nonetype contendo a tabela ANOVA"""
         print('{:^110}'.format('\033[1m'+'TABELA ANOVA'+'\033[0m'))
-        print('-='*51)
+        print('-='*53)
         print(tabulate(self.__anova_list(),tablefmt="grid"))
-        print('-='*51)
+        print('-='*53)
         
     #Data visualization 
     
-    def plotar_grafico(self):
+    def plot_graphs_anova(self):
+        """
+        Retorna os gráficos referentes aos parâmetros da tabela ANOVA com o objetivo de análise visual.
+        
+        Returns
+        ---------
+        1 - Gráfico de Médias Quadráticas: 
+        
+            - MQ da Regressão
+            - MQ dos Resíduos e seu respectivo valor de t-Student
+            - MQ do Erro Puro
+            - MQ de Falta de Ajuste e seu respectivo valor de t-Student
+        
+        2 - Gráfico de Teste F2 - MSLof/MSPE:
+        
+            - Valor de F2 
+            - Valor de F tabelado 
+            - Relação entre F2/Ftabelado
+        
+        3 - Gráfico de Teste F1 - MSReg/MSRes:
+        
+            - Valor de F1 
+            - Valor de F tabelado 
+            - Relação entre F1/Ftabelado
+            
+        4 - Gráfico de Coeficiente de Determinação:
+            
+            - Variação explicada 
+            - Variação explicada máxima
+        """
         fig = plt.figure(constrained_layout=True,figsize=(10,10))
         subfigs = fig.subfigures(2, 2, wspace=0.07, width_ratios=[1.4, 1.])
-        spec = fig.add_gridspec(ncols=2, nrows=2)
 
         #Mean of Squares (Médias Quadraticas)
         axs0 = subfigs[0,0].subplots(2, 2)
@@ -457,7 +527,8 @@ class Regression2:
         axs2[2].bar('F1calc/ Ftable',self.__ftest1()/self.__ftable(), color= 'navy')
         axs2[2].set_title(r'$\bf\frac{F1_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)#F1 calculado/\nF1 tabelado
         axs2[2].axhline(1,color='w')
-
+        
+        #Coeficiente de determinação 
         axs3 = subfigs[1,1].subplots(1, 2)
         axs3[0].bar('R²',self.__calculate_R2(),color='dimgray' ,)
         axs3[0].set_title('Variação explicada',fontweight='black')
@@ -467,7 +538,150 @@ class Regression2:
         axs3[1].set_title('Máxima\n variação explicada',fontweight='black')
         axs3[1].axhline(1,color='k')
         
+     
         fig.suptitle('Tabela ANOVA (Analisys of Variance)', fontsize=20, fontweight='black',y=1.05)
-        plt.savefig('regression2_graficos_anova.pdf')
+        plt.savefig('Tabela ANOVA (Analisys of Variance).png',transparent=True)
 
+      
         return plt.show()
+
+    
+    # Verificação dos coeficientes de regressão  
+    
+    @staticmethod 
+    def __user_message():
+        return input('\n\n'+'\033[1mO modelo possui falta de ajuste? [S/N]  \033[0m'+'\n\n')
+    
+    def __check_model(self):
+        check_answer = self.__user_message().upper()
+        if check_answer == 'S':
+            return True
+        elif check_answer == 'N':
+            return False
+        else:
+            print('\033[1mErro21: somente as respostas "S" ou "N" serão aceitos.')
+            print('Operação Finalizada')
+            return sys.exit()
+    
+    def __define_ic_coefs(self):
+        check_answer = self.__check_model()
+        if check_answer == True:
+            return self.__define_ic_MSLoF()
+        elif check_answer == False:
+            return self.__define_ic_MSRes()
+        
+    def __define_ic_MSLoF(self):
+        return (((self.__calculate_MSLoF()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSLof()-1)).round(2)
+        
+    def __define_ic_MSRes(self):
+        return (((self.__calculate_MSres()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSres()-1)).round(2)
+    
+    def plot_graphs_regression(self):
+        """
+        Retorna gráficos do modelo de regressão para análise de variáveis insignificantes ao modelo.
+        
+        Returns
+        --------
+        
+        1 - Gráfico valores Experimental x Previsto e seus respectivos intervalos de confiança.
+        
+        2 - Gráfico de Previsto x Resíduo
+        
+        3 - Gráfico de Histograma de resíduos
+        
+        4 - Gráfico de Coeficientes de Regressão e seus respectivos intervalos de confiança.
+        
+        
+        """
+        fig = plt.figure(constrained_layout=True,figsize=(10,10))
+        subfigs = fig.subfigures(3,1)
+        spec = fig.add_gridspec(3, 2)
+        
+      
+        axs0 =  fig.add_subplot(spec[0, :])
+        
+        m, b, r_value, p_value, std_err = linregress(self.y, self.__calculate_pred_values())
+        axs0.plot(self.y, m*self.y + b,color='darkred')
+        axs0.legend(['y = {0:.3f}x + {1:.3f}'.format(m,b) +'\n'+'R²= {0:.4f}'.format(r_value)])
+        
+        axs0.errorbar(self.y,self.__calculate_pred_values(),self.__calculate_residuals(), fmt='o', linewidth=2, capsize=6, color='darkred')
+
+        axs0.set_title('Experimental x Previsto',fontweight='black')
+        axs0.set_ylabel('Previsto')
+        axs0.set_xlabel('Experimental')
+        axs0.grid()
+        
+        axs1 =  fig.add_subplot(spec[1, 0])
+        
+        axs1.scatter(x=self.__calculate_pred_values(), y=self.__calculate_residuals(),marker="s",color='r')
+        axs1.set_title('Previsto x Resíduo',fontweight='black')
+        axs1.set_xlabel('Previsto')
+        axs1.set_ylabel('Resíduo')
+        axs1.axhline(0,color='darkred')
+        axs1.grid()
+        
+        axs2 = fig.add_subplot(spec[1, 1])
+        
+        axs2.hist(self.__calculate_residuals(),color ='indigo',bins=30)
+        axs2.set_title('Histograma dos resduos',fontweight='black')
+        axs2.set_ylabel('Frequência')
+        axs2.set_xlabel('Resíduos')
+        
+        #axs3 = fig.add_subplot(spec[2, :])
+       
+        axs3 =  fig.add_subplot(spec[2, :])
+        
+        axs3.errorbar(self.X.columns,self.__calculate_coefs(),self.__define_ic_coefs()[0], fmt='o', linewidth=2, capsize=6, color='darkred')
+        axs3.axhline(0,color='darkred', linestyle='dashed')
+        axs3.set_ylabel('Valores dos coeficientes')
+        axs3.set_xlabel('Coeficientes')
+        axs3.set_title('Coeficientes de Regressão',fontweight='black')
+        axs3.grid()
+        
+        fig.suptitle('Modelo de Regressão'+'\n' + '-- Regression2 --', fontsize=20, fontweight='black',y=1.1)
+        plt.savefig('Modelo de Regressão.png',transparent=True)
+        
+        return plt.show()
+    
+    def regression2(self):
+        """
+        Função -> regression2
+        
+        Função adaptada do "fabi_efeito" utilizada no Octave pertencente ao Prof.Dr.Edenir Pereira Filho para o Python**
+        Canal do Youtube: https://www.youtube.com/c/EdenirPereiraFilho
+        
+        Essa rotina tem como finalidade calcular modelos de regressão empregando a seguinte equação:
+        
+        $inv(X^tX)X^ty$
+
+
+        Atributes - Inseridos na instancia da classe Regression2
+        -----------
+        
+        X = matriz com os coeficientes que serao calculados (type: andas.Dataframe)
+        
+        y = resposta que sera modelada (pandas.Series)
+        
+        SSPE = Soma Quadrática do Erro Puro dos valores do ponto Central (type: float or int) 
+            -> Utilize pde.CP(yc).SSPE() para calcular) --> help(pde.CP.SSPE) para
+        
+        df = Graus de liberdade do ponto central (type: int)
+            -> Utilize pde.CP(yc,k).df_SSPE() --> help(pde.CP.df_SSPE)
+        
+        Returns
+        -----------
+        
+        1 - Tabela ANOVA (Analisys of Variance) (type: NoneType)
+        
+        2- plot_graphs_anova() (type: NoneType) --> help(pde.Regression2.plot_graphs_anova)
+        
+        3 - Interação com usuário perguntando se há falta de ajuste no modelo. (type: str)
+        
+        4- plot_graphs_regression() (type: NoneType) --> help(pde.Regression2.plot_graphs_regression)
+        
+        
+        """
+        self.create_table_anova()
+        self.plot_graphs_anova()
+        self.plot_graphs_regression()
+        
