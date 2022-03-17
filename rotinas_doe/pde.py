@@ -203,6 +203,7 @@ class CP:
     def __init__(self,y=None , k=None):
         self.y = y
         self.k = k
+
         
     def __array(self): 
         return self.y.values
@@ -288,6 +289,8 @@ class Regression2:
         
    df = Graus de liberdade do ponto central (type: int)
    -> Utilize pde.CP(yc,k).df_SSPE() --> help(pde.CP.df_SSPE)
+   
+   auto = Automatizar a exclusão dos coeficientes significantes (type: bool)
         
    Methods
    -----------
@@ -301,25 +304,53 @@ class Regression2:
    plot_graphs_regression: retorna gráficos do modelo de regressão (type: NoneType)
    --> help(pde.Regression2.plot_graphs_regression)
         
+   model_coefients: retorna uma lista com os coeficientes do modelo, quando há coeficientes insignificantes, estes possuirão valor nulo.
+   
+   recalculate_coefs : retorna um pandas.dataframe com os coeficientes significantes do modelo 
+   
    regression2: função mestre que cria um modelo de regressão e realiza ajuste do mesmo através de Analisys of Variance
    --> help(pde.Regression2.regression2) 
+   
+  
     """
-        
-        
-    def __init__(self, X, y, SSPE=None, df=None):
-        self.X = X 
+   
+    __check_ci = True    
+    __final_msg = '\033[1mOperação finalizada! Verifique os resultados em seu diretório.'
+    
+    def __init__(self, X:object, y:object, SSPE=None, df=None, auto=False):
+        self._X = X
         self.y = y
         self.SSPE = SSPE
         self.df = df 
-    
+        self._auto = auto
+        
+            
     def __n_exp(self):
-        return  X.shape[0]
+        return  self.X.shape[0]
+   
+    @property
+    def auto(self):
+        return self._auto
     
+    @auto.setter # changes auto False to True for exclude columns insignificants after regression2 function
+    def auto(self, value:bool) -> bool:
+        if isinstance(value,bool):
+            self._auto = value
+    
+    @property
+    def X(self):
+        return self._X
+    
+    @X.setter
+    def X(self, new_dataframe:object) -> object:
+        if isinstance(new_dataframe,object):
+            self._X = new_dataframe
+        
     def __n_coef(self):
-        return X.shape[1]
+        return self.X.shape[1]
     
     def __matrix_X(self):
-        return self.X.values 
+        return self._X.values 
     
     def __array_y(self):
         return self.y.values
@@ -341,13 +372,14 @@ class Regression2:
         return np.matmul(np.linalg.inv(np.matmul(self.__matrix_X().T,self.__matrix_X())),
                          self.__matrix_X().T*self.__array_y()).T
     
-    def __calculate_coefs(self):
+    def calculate_coefs(self):
         """Retorna a soma dos resultado da definição "__matrix_coef" """
         return np.einsum('ij->j', self.__calculate_matrix_coef()).round(2)
     
+    
     def __calculate_pred_values(self):
         """Retorna os valores previstos pelo modelo"""
-        return np.matmul(self.X,self.__calculate_coefs())
+        return np.matmul(self.X,self.calculate_coefs())
     
     def __calculate_residuals(self):
         """Retorna o valor dos resíduos dos valores previstos"""
@@ -546,34 +578,36 @@ class Regression2:
         return plt.show()
 
     
-    # Verificação dos coeficientes de regressão  
+    #  Verification of regression coefficients
+
     
-    @staticmethod 
-    def __user_message():
+    def  __user_message(self):
         return input('\n\n'+'\033[1mO modelo possui falta de ajuste? [S/N]  \033[0m'+'\n\n')
     
-    def __check_model(self):
+    def __check_model(self): #Return boolean variable for define confidence interval through user message
         check_answer = self.__user_message().upper()
         if check_answer == 'S':
             return True
-        elif check_answer == 'N':
+        elif check_answer == 'N': # this change will be importani in recalculate_model function for decide confidence interval
             return False
         else:
             print('\033[1mErro21: somente as respostas "S" ou "N" serão aceitos.')
             print('Operação Finalizada')
             return sys.exit()
     
-    def __define_ic_coefs(self):
-        check_answer = self.__check_model()
+    def __define_ic_coefs(self): #decides if will calculate ic mslof or msres
+        check_answer = self.__check_model() #Returns True or False through this method
         if check_answer == True:
-            return self.__define_ic_MSLoF()
+            Regression2.__check_ci = True # this change will be important in recalculate_model function for decide confidence interval
+            return self.__define_ic_MSLoF() # to calculate interval confidence for lack of fit
         elif check_answer == False:
-            return self.__define_ic_MSRes()
+            Regression2.__check_ci = True # this change will be important in recalculate_model function for decide confidence interval
+            return self.__define_ic_MSRes() #to calculate interval confidence for residues 
         
-    def __define_ic_MSLoF(self):
+    def __define_ic_MSLoF(self): #calculates confidence interval for mslof
         return (((self.__calculate_MSLoF()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSLof()-1)).round(2)
         
-    def __define_ic_MSRes(self):
+    def __define_ic_MSRes(self): #calculates confidence interval for msres
         return (((self.__calculate_MSres()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSres()-1)).round(2)
     
     def plot_graphs_regression(self):
@@ -631,7 +665,7 @@ class Regression2:
        
         axs3 =  fig.add_subplot(spec[2, :])
         
-        axs3.errorbar(self.X.columns,self.__calculate_coefs(),self.__define_ic_coefs()[0], fmt='o', linewidth=2, capsize=6, color='darkred')
+        axs3.errorbar(self.X.columns,self.calculate_coefs(),self.__define_ic_coefs()[0], fmt='o', linewidth=2, capsize=6, color='darkred')
         axs3.axhline(0,color='darkred', linestyle='dashed')
         axs3.set_ylabel('Valores dos coeficientes')
         axs3.set_xlabel('Coeficientes')
@@ -643,7 +677,61 @@ class Regression2:
         
         return plt.show()
     
+    
+    # Recalculate the model and to variables insignificant excludes automatically    
+    
+    def __dict_coefs_ci(self): #list with dicts {'coefs':values,'coefs_max':values,'coefs_min':values}
+        return  [dict(zip(self.X.columns, self.calculate_coefs())),
+                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[0].round(2))),
+                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[1].round(2)))]
+    
+    def recalculate_coefs(self):  #returns an array with coefs values and coefs insignificants equal zero 
+        """Retorna um DataFrame com os coeficientes significantes"""
+        
+        if self.auto == True:
+            return self.__delete_coefs_insignificants_matrix()
+        else:
+            raise TypeError('recalculate_coefs() está faltando 1 argumento posicional requirido "auto=True".')
+
+    def __calculate_inter_max_min_coefs(self): #returns a tuple with (coef+ci,coef-ci)
+        if Regression2.__check_ci == True:
+            return [self.calculate_coefs() + self.__define_ic_MSLoF(), 
+                            self.calculate_coefs() - self.__define_ic_MSLoF()]
+        elif  Regression2.__check_ci == False:
+            return [self.calculate_coefs() + self.__define_ic_MSRes(),
+                            self.calculate_coefs() - self.__define_ic_MSRes()] 
+
+        
+    def __delete_coefs_insignificants(self): #select (coef - ci <= coef <= coef + ci) and replace for zero
+        coefs = self.__dict_coefs_ci()[0]
+        max_ = self.__dict_coefs_ci()[1]
+        min_ = self.__dict_coefs_ci()[2]
+        for coef in coefs.keys():
+            if min_[coef]<= 0 <= max_[coef]:
+                coefs[coef] = 0
+        return coefs
+    
+    def model_coefients(self):
+        """Retorna uma lista com os valores de coeficientes significantes e valor nulos para coeficientes insignificantes"""
+        return list(self.__delete_coefs_insignificants().values())
+            
+        
+    def __delete_coefs_insignificants_matrix(self):
+        coefs_recalculate = self.__delete_coefs_insignificants()
+        for coef in self.__delete_coefs_insignificants().keys(): # scroll through dictionary keys
+            if coefs_recalculate[coef] == 0: # values coef equal zero multiplies the column in matrix X  
+                del self.X[coef] #save in local variable for process
+        return self.X # changes atribute default
+    
+        
+    def __executor_regression2(self):
+        self.create_table_anova()
+        self.plot_graphs_anova()
+        self.plot_graphs_regression()
+
+         
     def regression2(self):
+        
         """
         Função -> regression2
         
@@ -668,6 +756,7 @@ class Regression2:
         df = Graus de liberdade do ponto central (type: int)
             -> Utilize pde.CP(yc,k).df_SSPE() --> help(pde.CP.df_SSPE)
         
+        
         Returns
         -----------
         
@@ -681,7 +770,83 @@ class Regression2:
         
         
         """
-        self.create_table_anova()
-        self.plot_graphs_anova()
-        self.plot_graphs_regression()
+        self.__executor_regression2()
+        if self.auto == True:
+            self.recalculate_coefs()
+            self.__executor_regression2()
+            return print(Regression2.__final_msg)
+        else:
+            return print(Regression2.__final_msg)
         
+class Super_fabi:
+    """
+    Funcao para calcular superficie de resposta e gráfico de contorno
+    A matriz X deve conter:
+    Coluna 1 = coeficientes na seguinte ordem, b0, b1, b2, b11, b22, b12
+    Coluna 2 = Valores codificados da variavel 1
+    Coluna 3 = Valores reais da variável 1
+    Coluna 4 = Valores codificados da variavel 2
+    Coluna 5 = Valores reais da variavel 2
+    """
+    def __init__(self, coefs:list, realmax1,realmin1,realmax2,realmin2,normmax1,normmin1,normmax2,normmin2):
+        self.coefs = coefs
+        self.realmax1 = realmax1
+        self.realmin1 = realmin1
+        self.realmax2 = realmax2
+        self.realmin2 = realmin2
+        self.normmax1 = normmax1 
+        self.normmin1 = normmin1 
+        self.normmax2 = normmax2 
+        self.normmin2 = normmin2 
+    
+    def array_v1(self):
+        return np.linspace(self.normmin1 ,self.normmax1 ,num=101)
+    
+    def array_v2(self):
+        return np.linspace(self.normmin2,self.normmax2,num=101)
+    
+    def meshgrid(self):
+        return np.meshgrid(self.array_v1(),self.array_v1())
+    
+    def z(self):
+    
+        """
+        Retorna valor previsto pelo modelo.
+        
+        Parameters 
+        -----------
+        
+        v1: valor(es) da variável 1 (if meshgrid==True --> type numpy.array else: type float)
+        
+        v2: valor(es) da variável 2 (if meshgrid==True --> type numpy.array else: type float)
+        
+        meshgrid: (optional) (if meshgrid == True --> will be  created a matrix with Z values else: returns only a item type float)
+
+        """
+        #x, y = self.array_v1(),self.array_v2()
+        x, y = self.meshgrid()
+        b0, b1, b2, b11, b22, b12 = self.coefs
+        return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(1)
+   
+    
+    def superficie(self):
+        fig = plt.figure(figsize=(8,6))
+        ax3d = plt.axes(projection="3d")
+        
+        X,Y = self.meshgrid()
+        b0, b1, b2, b11, b22, b12 = self.coefs
+        
+        ax3d.plot_surface(X, Y,  self.z(), rstride=1, cstride=1,cmap='viridis', edgecolor='none')
+        ax3d.set_title('Suerfície de Resposta do Modelo',fontsize=20, fontweight='black')
+        plt.suptitle(r'$\bfResposta = {} + {}x_1 + {}x_2 + {}x_1^2 + {}x_2^2 + {}x_1x_2 $'.format(b0, b1, b2, b11, b22, b12),y=0.85)
+        ax3d.set_xlabel('X',fontweight='black')
+        ax3d.set_ylabel('Y',fontweight='black')
+        ax3d.set_zlabel('Z',fontweight='black')
+        
+        #plt.text(2, 0.65,r'''$Resposta = {} + {}x_1 + {}x_2 + {}x_1^2 + {}x_2^2 + {}x_1x_2 $'''.format(b0, b1, b2, b11, b22, b12),fontsize=20)
+        #plt.text(2, 0.65,s= 'vai tomar no cu')
+        #plt.text(0.6, 0.6, r'$\mathcal{A}\mathrm{sin}(2 \omega t)$')
+
+        plt.tight_layout()
+
+        plt.show()
