@@ -799,16 +799,26 @@ class Super_fabi:
         self.normmax2 = normmax2 
         self.normmin2 = normmin2 
     
-    def array_v1(self):
+
+    def array_n1(self):
         return np.linspace(self.normmin1 ,self.normmax1 ,num=101)
     
-    def array_v2(self):
+    def array_n2(self):
         return np.linspace(self.normmin2,self.normmax2,num=101)
     
-    def meshgrid(self):
-        return np.meshgrid(self.array_v1(),self.array_v1())
+    def array_r1(self):
+        return np.linspace(self.realmin1 ,self.realmax1 ,num=101)
     
-    def z(self):
+    def array_r2(self):
+        return np.linspace(self.realmin2,self.realmax2,num=101)
+    
+    def meshgrid_norm(self):
+        return np.meshgrid(self.array_n1(),self.array_n2())
+    
+    def meshgrid_real(self):
+        return np.meshgrid(self.array_r1(),self.array_r2())
+    
+    def z(self, meshgrid=None, x=None, y=None, manual=False):
     
         """
         Retorna valor previsto pelo modelo.
@@ -816,37 +826,148 @@ class Super_fabi:
         Parameters 
         -----------
         
-        v1: valor(es) da variável 1 (if meshgrid==True --> type numpy.array else: type float)
+        v1: valor(es) da variável 1 (if meshgrid is True --> type numpy.array else: type float)
         
-        v2: valor(es) da variável 2 (if meshgrid==True --> type numpy.array else: type float)
+        v2: valor(es) da variável 2 (if meshgrid is True --> type numpy.array else: type float)
         
         meshgrid: (optional) (if meshgrid == True --> will be  created a matrix with Z values else: returns only a item type float)
 
+        manual: (optional) (if manual is True --> will be calculate z value for x and y parameters ) (type:bool)
+        
         """
-        #x, y = self.array_v1(),self.array_v2()
-        x, y = self.meshgrid()
         b0, b1, b2, b11, b22, b12 = self.coefs
-        return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(1)
-   
+        
+        
+        if manual == True: 
+            if x == None or y == None:
+                raise TypeError('recalculate_coefs() está faltando 2 argumentos posicionais requirido "x" e "y".')
+            else:       
+                return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
+        elif meshgrid == None and manual == False:
+            raise TypeError('Insira parâmetros ao método.')
+            
+        try:
+            if meshgrid == True:
+                x, y = self.meshgrid_norm()
+                return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
+            elif meshgrid == False:
+                x, y = self.array_n1(), self.array_n2()
+                return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
+                    
+        except: raise TypeError('recalculate_coefs() está faltando 1 argumento posicional requirido "meshgrid".')
+
+    def __index_max_values(self): # Return matrix meshgrid index for max value model
+        idx1, idx2 = np.where(self.z(meshgrid=True) == self.z(meshgrid=True).max().max())
+        return idx1[0],idx2[0]  
     
-    def superficie(self):
-        fig = plt.figure(figsize=(8,6))
-        ax3d = plt.axes(projection="3d")
+    @property
+    def maxnorm(self):
+        """Retorna valores das coordenadas do sinal máximo para as variáveis codificadas.
         
-        X,Y = self.meshgrid()
-        b0, b1, b2, b11, b22, b12 = self.coefs
+        Returns 
+        ----------
         
-        ax3d.plot_surface(X, Y,  self.z(), rstride=1, cstride=1,cmap='viridis', edgecolor='none')
-        ax3d.set_title('Suerfície de Resposta do Modelo',fontsize=20, fontweight='black')
-        plt.suptitle(r'$\bfResposta = {} + {}x_1 + {}x_2 + {}x_1^2 + {}x_2^2 + {}x_1x_2 $'.format(b0, b1, b2, b11, b22, b12),y=0.85)
-        ax3d.set_xlabel('X',fontweight='black')
-        ax3d.set_ylabel('Y',fontweight='black')
-        ax3d.set_zlabel('Z',fontweight='black')
+        (x_coordenate, y_coordenate) for codificates values  like a tuple.
         
-        #plt.text(2, 0.65,r'''$Resposta = {} + {}x_1 + {}x_2 + {}x_1^2 + {}x_2^2 + {}x_1x_2 $'''.format(b0, b1, b2, b11, b22, b12),fontsize=20)
-        #plt.text(2, 0.65,s= 'vai tomar no cu')
-        #plt.text(0.6, 0.6, r'$\mathcal{A}\mathrm{sin}(2 \omega t)$')
+        """
+        idx1, idx2 = self.__index_max_values()[0], self.__index_max_values()[1]
+        v2, v1 =  self.meshgrid_norm()[0], self.meshgrid_norm()[1]
+        return v1[idx2][idx1], v2[idx2][idx1]
+    
+    @property
+    def maxreal(self):
+        """Retorna valores das coordenadas do sinal máximo para as variáveis codificadas.
+        
+        Returns 
+        ----------
+        
+        (x_coordenate, y_coordenate) for real values like a tuple.
+        """
+        idx1, idx2 = self.__index_max_values()[0], self.__index_max_values()[1]
+        v1, v2 = self.meshgrid_real()[0], self.meshgrid_real()[1]
+        return v1[idx1][idx2], v2[idx1][idx2]   
+ 
+    @property
+    def zmax(self):
+        r"""Retorna o valor do sinal máximo do modelo.
+        
+        Return
+        --------
+        
+        fmax(x,y) = zmax like a float.
+        """
+        return self.z(meshgrid=True).max().max()
+    
+    
+ 
+    def __etiqueta(self,matrix_X, vector_y, ax):
+        vector_y = [str(j) for j in vector_y.values] # vector_y to string list 
+               
+        for i, label in enumerate(vector_y):
+            ax.annotate(label,( matrix_X['b1'][i], matrix_X['b2'][i]),color='k',fontsize=10)  
+    
+    def superficie(self, matrix_X = None, vector_y = None,scatter=False):
+        """Retorna os gráficos de superfície e de contorno do modelo
+        
+        Parameters
+        ------------
+        
+        X: matriz X com os valores codificados dos coeficiente (type: pandas.dataframe)
+        
+        y: vetor y com os valores de sinais 
+        
+        """
+        fig = plt.figure(figsize=(12,12))
+        
+        # Superficie de resposta
+        ax1 = fig.add_subplot(1,2, 1, projection='3d')
 
-        plt.tight_layout()
-
+        
+        V1, V2= self.meshgrid_real()
+        Z = self.z(meshgrid=True)
+        #b0, b1, b2, b11, b22, b12 = self.coefs
+        
+        
+        surf =  ax1.plot_surface(V1, V2, Z, rstride=1, cstride=1,cmap='viridis', edgecolor='none')
+        #fig.colorbar(surf, shrink=.5,aspect=5,anchor=(0.5,0.5),pad =.17)
+        
+        ax1.set_title('Superfície de Resposta do Modelo',fontsize=12, fontweight='black',y=1,x=.55)
+        ax1.set_xlabel('Variável 1')
+        ax1.set_ylabel('Variável 2')
+        ax1.set_zlabel('Resposta do Modelo')
+        
+        # Contorno 
+        v1, v2= self.meshgrid_norm()
+        
+        ax2 = fig.add_subplot(1,2,2)
+        
+        #cs = plt.contourf(X,Y, self.z(meshgrid=True), levels=np.linspace(Z.min(),Z.max(),num=7),linewidths='solid',linestyles='solid',antialiased=True)
+        contours = ax2.contour(v1, v2, Z, 3,colors='black', levels=6)
+        ax2.clabel(contours, inline=True, fontsize=12)
+        plt.imshow(Z, extent=[self.normmin1, self.normmax1, self.normmax2, self.normmin2], origin='lower', cmap='viridis', alpha=1)
+        plt.colorbar(aspect=6, pad=.15)
+        
+        
+        if scatter == True:
+            if isinstance(matrix_X,object):
+                ax2.scatter(matrix_X['b1'],matrix_X['b2'], color='w',marker=(5, 1),s=50)
+                self.__etiqueta(matrix_X, vector_y, ax2)
+        
+        ax2.scatter(self.maxnorm[0], self.maxnorm[1], color='darkred',marker=(5, 1),s=100)   
+        ax2.annotate(r'$z_{max}= %.2f$'%self.zmax, (self.maxnorm[0], self.maxnorm[1]),color='k')
+        
+        ax2.set_xticks(np.array([-2**.5,int(-1),int(0),int(1),2**.5,self.maxnorm[0]]).round(2))
+        ax2.set_yticks(np.array([-2**.5,int(-1),int(0),int(1),2**.5,self.maxnorm[1]]).round(2))
+        ax2.set_xlabel('Variável 1')
+        ax2.set_ylabel('Variável 2')
+        ax2.set_title('Contorno do Modelo',fontsize=12, fontweight='black',y=1.1)
+        
+        fig.text(0.2,.71,r'$R_{max}(%.2f,%.2f) = %.1f\qquad\qquad\qquad  v_1^{max} = %.1f \quad e\quad v_2^{max} = %.1f $'%(self.maxnorm[0],self.maxnorm[1],self.zmax,self.maxreal[0],self.maxreal[1]),
+                 fontsize=15,horizontalalignment='left')
+        plt.suptitle(r'$\bfResposta = {} + {}v_1 + {}v_2 + {}v_1^2 + {}v_2^2 + {}v_1v_2 $'.format(b0, b1, b2, b11, b22, b12),y=.77,x=.45,fontsize=20)
+        
+        
+     
+        
+        plt.tight_layout(w_pad=5)
         plt.show()
