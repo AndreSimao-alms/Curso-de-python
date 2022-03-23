@@ -11,6 +11,7 @@ from scipy.stats import f
 from scipy.stats import linregress
 from tabulate import tabulate
 from matplotlib.backends.backend_pdf import PdfPages
+from IPython.display import display, Latex
 import sys
 #class Super_fabi
 
@@ -41,7 +42,7 @@ class Fabi_efeito:
     """
     
     
-    def __init__(self, x, y, erro_efeito, t):
+    def __init__(self, x, y, erro_efeito=0, t=0):
         self.X = x
         self.y = y
         self.erro_efeito = erro_efeito
@@ -245,7 +246,7 @@ class CP:
     
     def erro_efeito(self):
         """Retorna o valor de erro de um efeito"""
-        if self.k == None or self.y == None:
+        if self.k == None or self.y.all() == None:
             return self.__mensagem_erro_11()
         else:
             return self.__calcular_erro_efeito()
@@ -280,18 +281,24 @@ class Regression2:
    Atributes
    -----------
        
-   X = matriz com os coeficientes que serao calculados (type: andas.Dataframe)
+   X: matriz com os coeficientes que serao calculados (type: andas.Dataframe)
         
-   y = resposta que sera modelada (pandas.Series)
+   y: resposta que sera modelada (pandas.Series)
         
-   SSPE = Soma Quadrática do Erro Puro dos valores do ponto Central (type: float or int) 
+   SSPE (optional): Soma Quadrática do Erro Puro dos valores do ponto Central (type: float or int) 
    -> Utilize pde.CP(yc).SSPE() para calcular) --> help(pde.CP.SSPE) para
         
-   df = Graus de liberdade do ponto central (type: int)
+   df (optional): Graus de liberdade do ponto central (type: int)
    -> Utilize pde.CP(yc,k).df_SSPE() --> help(pde.CP.df_SSPE)
    
-   auto = Automatizar a exclusão dos coeficientes significantes (type: bool)
-        
+    ATENÇÃO! ESTE RECURSO ESTÁ AINDA EM DESENVOLVIMENTO E NÃO É FUNCIONAL QUANDO HÁ RÉPLICAS AOS DADOS!
+   auto (optional): Automatizar a exclusão dos coeficientes significantes (type: bool)
+   -> Sobre mais: help(pde.Regression2.auto).
+   
+   self_check (optional): Automatizar a verificação se há falta de ajuste do modelo através da análise de variância. 
+   -> Sobre mais: help(pde.Regression2.self_check) 
+   
+   
    Methods
    -----------
         
@@ -317,17 +324,26 @@ class Regression2:
     __check_ci = True    
     __final_msg = '\033[1mOperação finalizada! Verifique os resultados em seu diretório.'
     
-    def __init__(self, X:object, y:object, SSPE=None, df=None, auto=False):
+    def __init__(self, X:object, y:object, SSPE=None, df=None, auto=False, self_check=False):
         self._X = X
         self.y = y
         self.SSPE = SSPE
         self.df = df 
         self._auto = auto
-        
+        self._self_check = self_check
             
     def __n_exp(self):
         return  self.X.shape[0]
-   
+    
+    @property
+    def self_check(self):
+        return self._self_check
+    
+    @self_check.setter
+    def self_check(self, value:bool) -> bool:
+        if isinstance(value,bool):
+            self._self_check = value
+            
     @property
     def auto(self):
         return self._auto
@@ -381,6 +397,11 @@ class Regression2:
         """Retorna os valores previstos pelo modelo"""
         return np.matmul(self.X,self.calculate_coefs())
     
+ 
+    def predict(self, value=0):
+        """Retorna os valores previstos pelo modelo"""
+        return np.matmul(self.X,self.calculate_coefs()+value)
+    
     def __calculate_residuals(self):
         """Retorna o valor dos resíduos dos valores previstos"""
         return self.__array_y()-self.__calculate_pred_values()
@@ -388,10 +409,10 @@ class Regression2:
     # Sum of Squares - Part 1
     
     def __calculate_SSreg(self):
-        return np.sum((self. __calculate_pred_values()-self.__array_y().mean())**2).round(2)
+        return np.sum((self. __calculate_pred_values()-self.__array_y().mean())**2)
     
     def __calculate_SSres(self):
-        return np.sum(self.__calculate_residuals()**2).round(2)
+        return np.sum(self.__calculate_residuals()**2)
 
     def __calculate_SSTot(self):
         return np.sum(self.__calculate_SSreg()+self.__calculate_SSres())
@@ -424,7 +445,7 @@ class Regression2:
         return self.__n_exp()-1
     
     def __df_SSLof(self):
-        return (self.__n_exp()-self.__n_coef())-self.df
+        return (self.__n_exp() - self.__n_coef()) - self.df
     
     # Mean of Squares - Part 3
     
@@ -441,7 +462,10 @@ class Regression2:
         return self.SSPE/self.df
     
     def __calculate_MSLoF(self):
-        return self.__calculate_SSLoF()/self.__df_SSLof()
+        if self.__df_SSLof() != 0:
+            return self.__calculate_SSLoF()/self.__df_SSLof()
+        else:
+            return self.__calculate_SSLoF()
     
     # F Tests
     
@@ -453,8 +477,11 @@ class Regression2:
     
     # F table
     
-    def __ftable(self): 
-        return f.ppf(.95, self.__df_SSreg(),self.__df_SSres()) #F tabelado com 95% de confiança
+    def __ftable1(self): 
+        return f.ppf(.95, self.__df_SSreg(),self.__df_SSres()) #F1 tabelado com 95% de confiança
+    
+    def __ftable2(self): 
+        return f.ppf(.95, self.__df_SSLof(),self.df) #F1 tabelado com 95% de confiança
     
     # ANOVA Table
     def __anova_list(self):
@@ -462,12 +489,12 @@ class Regression2:
         return [
         ['\033[1m'+'Parâmetro','Soma Quadrática (SQ)','Graus de Liberdade(GL)','Média Quadrática (MQ)','Teste F1'+'\033[0m'],
         ['\033[1mRegressão:\033[0m','%.0f'%self.__calculate_SSreg(),self.__df_SSreg(),'%.0f'%self.__calculate_MSreg(),'%.1f'%self.__ftest1() ],
-        ['\033[1mResíduo:\033[0m', '%.1f'%self.__calculate_SSres(), self.__df_SSres(),'%.2f'%self.__calculate_MSres(),'%.1f'%self.__ftest1()],
+        ['\033[1mResíduo:\033[0m', '%.1f'%self.__calculate_SSres().round(2), self.__df_SSres(),'%.2f'%self.__calculate_MSres(),'%.1f'%self.__ftest1()],
         ['\033[1mTotal:\033[0m', '%.0f'%self.__calculate_SSTot(), self.__df_SSTot(), '%.0f'%self.__calculate_MSTot(), '\033[1mTeste F2\033[0m'],
         ['\033[1mErro puro:\033[0m','%.2f'%self.SSPE, self.df, '%.2f'%self.__calculate_MSPE(), '%.2f'%self.__ftest2() ],
-        ['\033[1mFalta de Ajuste:\033[0m', '%.2f'%self.__calculate_SSLoF(), self.__df_SSLof(), '%.2f'%self.__calculate_MSLoF(), '%.2f'%self.__ftest2()],
-        ['\033[1mR²:\033[0m', '%.4f'%self.__calculate_R2(), '\033[1mR:\033[0m', '%.4f'%self.__calculate_R(),  '\033[1mF Tabelado\033[0m'],
-        ['\033[1mR² máximo:\033[0m','%.4f'%self.__calculate_R2_max(), '\033[1mR máximo:\033[0m', '%.4f'%self.__calculate_R_max(),'%.0f'%CP(y=self.y).SSPE()]
+        ['\033[1mFalta de Ajuste:\033[0m', '%.2f'%self.__calculate_SSLoF(), self.__df_SSLof(), '%.2f'%self.__calculate_MSLoF(), '\033[1mF Tabelado\033[0m'],
+        ['\033[1mR²:\033[0m', '%.4f'%self.__calculate_R2(), '\033[1mR:\033[0m', '%.4f'%self.__calculate_R(),'F1: %.3f'%self.__ftable1() ],
+        ['\033[1mR² máximo:\033[0m','%.4f'%self.__calculate_R2_max(), '\033[1mR máximo:\033[0m', '%.4f'%self.__calculate_R_max(),'F2: %.3f'%self.__ftable2()]
         ]
         
     def create_table_anova(self):
@@ -517,12 +544,12 @@ class Regression2:
 
         axs0[0,0].bar('MSReg',self.__calculate_MSreg(),color='darkgreen' ,)
         axs0[0,0].set_title('MQ da Regressão',fontweight='black')
-        axs0[0,0].text(-.35, 100, '%.1f'%self.__calculate_MSreg(), fontsize=20,color='white')
+        axs0[0,0].text(-.35, 200, '%.1f'%self.__calculate_MSreg(), fontsize=20,color='white')
 
         axs0[0,1].bar('MSRes e t',self.__calculate_MSres(),color='darkorange')
         axs0[0,1].set_title('MQ ds Resíduos',fontweight='black')
-        axs0[0,1].text(-.35, 2.5, '%.1f'%self.__calculate_SSres(), fontsize=20,color='k')
-        axs0[0,1].text(-.35, 1.07, '%.4f'%CP().invt(self.__df_SSres()), fontsize=20,color='k')
+        axs0[0,1].text(-.35, 6.5, '%.1f'%self.__calculate_MSres(), fontsize=20,color='k')
+        axs0[0,1].text(-.35, 2.07, '%.4f'%CP().invt(self.__df_SSres()-1), fontsize=20,color='k')
 
         axs0[1,0].bar('MSPE',3, color= 'darkred')
         axs0[1,0].set_title('MQ do Erro Puro',fontweight='black')
@@ -540,23 +567,23 @@ class Regression2:
         axs1[0].bar('MSLof/MSPE',self.__ftest2(),color='darkred' ,)
         axs1[0].set_title('Teste F2',fontweight='black')
 
-        axs1[1].bar('F2',self.__ftest2(),color='darkred')
+        axs1[1].bar('F2',self.__ftable2(),color='darkred')
         axs1[1].set_title('F tabelado',fontweight='black')
 
-        axs1[2].bar('F2calc/ Ftable',self.__ftest2()/self.__ftable(), color= 'darkred')
+        axs1[2].bar('F2calc/ Ftable',self.__ftest2()/self.__ftable2(), color= 'darkred')
         axs1[2].set_title(r'$\bf\frac{F2_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)
         axs1[2].axhline(1,color='black')
 
         #F1 tests (testes F)
         axs2 = subfigs[1,0].subplots(1, 3)
 
-        axs2[0].bar('MSReg/MSRes',2,color='navy' ,)
+        axs2[0].bar('MSReg/MSRes',self.__ftest1(),color='navy' ,)
         axs2[0].set_title('Teste F1',fontweight='black')
 
-        axs2[1].bar('F1',3,color='navy')
+        axs2[1].bar('F1',self.__ftable1(),color='navy')
         axs2[1].set_title('F1 tabelado',fontweight='black')
 
-        axs2[2].bar('F1calc/ Ftable',self.__ftest1()/self.__ftable(), color= 'navy')
+        axs2[2].bar('F1calc/ Ftable',self.__ftest1()/self.__ftable1(), color= 'navy')
         axs2[2].set_title(r'$\bf\frac{F1_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)#F1 calculado/\nF1 tabelado
         axs2[2].axhline(1,color='w')
         
@@ -594,20 +621,42 @@ class Regression2:
             print('\033[1mErro21: somente as respostas "S" ou "N" serão aceitos.')
             print('Operação Finalizada')
             return sys.exit()
+        
+    def __self_turning(self):
+        if (self.__ftest1() > self.__ftable1()) or (self.__ftest2() < self.__ftable2()):
+            display(Latex(f'$$O\;modelo\;não\;possui\;falta\;de\;ajuste$$'))
+            return False
+        else:
+            display(Latex(f'$$O\;modelo\;possui\;falta\;de\;ajuste$$'))
+            return True
     
-    def __define_ic_coefs(self): #decides if will calculate ic mslof or msres
-        check_answer = self.__check_model() #Returns True or False through this method
+    
+    def define_ic_coefs(self): #decides if will calculate ic mslof or msres
+        if self.self_check == False:
+            check_answer = self.__check_model() #Returns True or False through this method
+        elif self.self_check == True:
+            check_answer = self.__self_turning()
+        else:
+            raise TypeError('"pde.Regression2().regression2()" está faltando 1 argumento posicionais requirido "self.check".')
+           
         if check_answer == True:
             Regression2.__check_ci = True # this change will be important in recalculate_model function for decide confidence interval
             return self.__define_ic_MSLoF() # to calculate interval confidence for lack of fit
         elif check_answer == False:
-            Regression2.__check_ci = True # this change will be important in recalculate_model function for decide confidence interval
+            Regression2.__check_ci = False # this change will be important in recalculate_model function for decide confidence interval
             return self.__define_ic_MSRes() #to calculate interval confidence for residues 
         
+    def show_ci(self, manual=None):
+        """Valores, em módulo, do intervalo de confiança do modelo"""
+        if Regression2.__check_ci == True or manual ==True:
+            return self.__define_ic_MSLoF()
+        elif  Regression2.__check_ci == False or manual == False:
+            return self.__define_ic_MSRes()
+    
     def __define_ic_MSLoF(self): #calculates confidence interval for mslof
         return (((self.__calculate_MSLoF()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSLof()-1)).round(2)
         
-    def __define_ic_MSRes(self): #calculates confidence interval for msres
+    def __define_ic_MSRes(self): #calculates confidence interval for msresN
         return (((self.__calculate_MSres()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSres()-1)).round(2)
     
     def plot_graphs_regression(self):
@@ -627,7 +676,7 @@ class Regression2:
         
         
         """
-        fig = plt.figure(constrained_layout=True,figsize=(10,10))
+        fig = plt.figure(constrained_layout=True,figsize=(10,14))
         subfigs = fig.subfigures(3,1)
         spec = fig.add_gridspec(3, 2)
         
@@ -635,11 +684,11 @@ class Regression2:
         axs0 =  fig.add_subplot(spec[0, :])
         
         m, b, r_value, p_value, std_err = linregress(self.y, self.__calculate_pred_values())
-        axs0.plot(self.y, m*self.y + b,color='darkred')
-        axs0.legend(['y = {0:.3f}x + {1:.3f}'.format(m,b) +'\n'+'R²= {0:.4f}'.format(r_value)])
         
-        axs0.errorbar(self.y,self.__calculate_pred_values(),self.__calculate_residuals(), fmt='o', linewidth=2, capsize=6, color='darkred')
-
+        axs0.plot(self.y, m*self.y + b,color='darkred')
+        axs0.legend(['y = {0:.3f}x + {1:.3f}'.format(m,b) +'\n'+'R= {0:.4f}'.format((r_value)**.5)])
+        axs0.scatter(self.y,self.predict(),color='b',marker=">",s=40)
+        #axs0.scatter(self.y,self.predict(-self.show_ci()),color='b',marker="+",s=20)
         axs0.set_title('Experimental x Previsto',fontweight='black')
         axs0.set_ylabel('Previsto')
         axs0.set_xlabel('Experimental')
@@ -665,7 +714,7 @@ class Regression2:
        
         axs3 =  fig.add_subplot(spec[2, :])
         
-        axs3.errorbar(self.X.columns,self.calculate_coefs(),self.__define_ic_coefs()[0], fmt='o', linewidth=2, capsize=6, color='darkred')
+        axs3.errorbar(self.X.columns,self.calculate_coefs(),self.define_ic_coefs(), fmt='^', linewidth=2, capsize=6, color='darkred')
         axs3.axhline(0,color='darkred', linestyle='dashed')
         axs3.set_ylabel('Valores dos coeficientes')
         axs3.set_xlabel('Coeficientes')
@@ -680,19 +729,15 @@ class Regression2:
     
     # Recalculate the model and to variables insignificant excludes automatically    
     
-    def __dict_coefs_ci(self): #list with dicts {'coefs':values,'coefs_max':values,'coefs_min':values}
+    def dict_coefs_ci(self): #list with dicts {'coefs':values,'coefs_max':values,'coefs_min':values}
         return  [dict(zip(self.X.columns, self.calculate_coefs())),
                  dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[0].round(2))),
                  dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[1].round(2)))]
     
     def recalculate_coefs(self):  #returns an array with coefs values and coefs insignificants equal zero 
         """Retorna um DataFrame com os coeficientes significantes"""
-        
-        if self.auto == True:
-            return self.__delete_coefs_insignificants_matrix()
-        else:
-            raise TypeError('recalculate_coefs() está faltando 1 argumento posicional requirido "auto=True".')
-
+        return self.__delete_coefs_insignificants_matrix()
+       
     def __calculate_inter_max_min_coefs(self): #returns a tuple with (coef+ci,coef-ci)
         if Regression2.__check_ci == True:
             return [self.calculate_coefs() + self.__define_ic_MSLoF(), 
@@ -700,12 +745,12 @@ class Regression2:
         elif  Regression2.__check_ci == False:
             return [self.calculate_coefs() + self.__define_ic_MSRes(),
                             self.calculate_coefs() - self.__define_ic_MSRes()] 
-
+    
         
     def __delete_coefs_insignificants(self): #select (coef - ci <= coef <= coef + ci) and replace for zero
-        coefs = self.__dict_coefs_ci()[0]
-        max_ = self.__dict_coefs_ci()[1]
-        min_ = self.__dict_coefs_ci()[2]
+        coefs = self.dict_coefs_ci()[0]
+        max_ = self.dict_coefs_ci()[1]
+        min_ = self.dict_coefs_ci()[2]
         for coef in coefs.keys():
             if min_[coef]<= 0 <= max_[coef]:
                 coefs[coef] = 0
@@ -740,7 +785,7 @@ class Regression2:
         
         Essa rotina tem como finalidade calcular modelos de regressão empregando a seguinte equação:
         
-        $inv(X^tX)X^ty$
+        inv(X^tX)X^ty
 
 
         Atributes - Inseridos na instancia da classe Regression2
@@ -770,6 +815,7 @@ class Regression2:
         
         
         """
+        
         self.__executor_regression2()
         if self.auto == True:
             self.recalculate_coefs()
@@ -777,6 +823,7 @@ class Regression2:
             return print(Regression2.__final_msg)
         else:
             return print(Regression2.__final_msg)
+        
         
 class Super_fabi:
     """
