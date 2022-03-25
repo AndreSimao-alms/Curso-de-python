@@ -1,4 +1,4 @@
-#class Fabi_efeito
+#class Fabi_efeito 111
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
@@ -14,6 +14,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 from IPython.display import display, Latex
 import sys
 #class Super_fabi
+#from sympy import symbols,diff,solve,subs 
+from sympy import *
+
 
 class Fabi_efeito:
     
@@ -497,13 +500,16 @@ class Regression2:
         ['\033[1mR² máximo:\033[0m','%.4f'%self.__calculate_R2_max(), '\033[1mR máximo:\033[0m', '%.4f'%self.__calculate_R_max(),'F2: %.3f'%self.__ftable2()]
         ]
         
-    def create_table_anova(self):
+    def create_table_anova(self,show=False):
         """Retorna Nonetype contendo a tabela ANOVA"""
-        print('{:^110}'.format('\033[1m'+'TABELA ANOVA'+'\033[0m'))
-        print('-='*53)
-        print(tabulate(self.__anova_list(),tablefmt="grid"))
-        print('-='*53)
-        
+        if show == True:
+            return tabulate(self.__anova_list())
+        else:
+            print('{:^110}'.format('\033[1m'+'TABELA ANOVA'+'\033[0m'))
+            print('-='*53)
+            print(tabulate(self.__anova_list(),tablefmt="grid"))
+            print('-='*53)
+
     #Data visualization 
     
     def plot_graphs_anova(self):
@@ -548,8 +554,8 @@ class Regression2:
 
         axs0[0,1].bar('MSRes e t',self.__calculate_MSres(),color='darkorange')
         axs0[0,1].set_title('MQ ds Resíduos',fontweight='black')
-        axs0[0,1].text(-.35, 6.5, '%.1f'%self.__calculate_MSres(), fontsize=20,color='k')
-        axs0[0,1].text(-.35, 2.07, '%.4f'%CP().invt(self.__df_SSres()-1), fontsize=20,color='k')
+        axs0[0,1].text(-.35,.5, '%.1f  %.3f'%(self.__calculate_MSres(),CP().invt(self.__df_SSres()-1)), fontsize=20,color='k')
+        #axs0[0,1].text(-.35, 2.07, '%.4f'%CP().invt(self.__df_SSres()-1), fontsize=20,color='k')
 
         axs0[1,0].bar('MSPE',3, color= 'darkred')
         axs0[1,0].set_title('MQ do Erro Puro',fontweight='black')
@@ -568,10 +574,10 @@ class Regression2:
         axs1[0].set_title('Teste F2',fontweight='black')
 
         axs1[1].bar('F2',self.__ftable2(),color='darkred')
-        axs1[1].set_title('F tabelado',fontweight='black')
+        axs1[1].set_title('F2 tabelado',fontweight='black')
 
         axs1[2].bar('F2calc/ Ftable',self.__ftest2()/self.__ftable2(), color= 'darkred')
-        axs1[2].set_title(r'$\bf\frac{F2_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)
+        axs1[2].set_title(r'$\bf\frac{F2_{calculado}}{F2_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)
         axs1[2].axhline(1,color='black')
 
         #F1 tests (testes F)
@@ -584,7 +590,7 @@ class Regression2:
         axs2[1].set_title('F1 tabelado',fontweight='black')
 
         axs2[2].bar('F1calc/ Ftable',self.__ftest1()/self.__ftable1(), color= 'navy')
-        axs2[2].set_title(r'$\bf\frac{F1_{calculado}}{F_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)#F1 calculado/\nF1 tabelado
+        axs2[2].set_title(r'$\bf\frac{F1_{calculado}}{F1_{tabelado}}$',fontweight='black',fontsize=16,y=1.031)#F1 calculado/\nF1 tabelado
         axs2[2].axhline(1,color='w')
         
         #Coeficiente de determinação 
@@ -622,20 +628,22 @@ class Regression2:
             print('Operação Finalizada')
             return sys.exit()
         
-    def __self_turning(self):
+    def __self_turning(self, msg=False):
         if (self.__ftest1() > self.__ftable1()) or (self.__ftest2() < self.__ftable2()):
-            display(Latex(f'$$O\;modelo\;não\;possui\;falta\;de\;ajuste$$'))
+            if msg == True:
+                display(Latex(f'$$O\;modelo\;nao\;possui\;falta\;de\;ajuste$$'))
             return False
         else:
-            display(Latex(f'$$O\;modelo\;possui\;falta\;de\;ajuste$$'))
+            if msg == True:
+                display(Latex(f'$$O\;modelo\;possui\;falta\;de\;ajuste$$'))
             return True
     
     
-    def define_ic_coefs(self): #decides if will calculate ic mslof or msres
+    def define_ic_coefs(self,msg=False): #decides if will calculate ic mslof or msres
         if self.self_check == False:
             check_answer = self.__check_model() #Returns True or False through this method
         elif self.self_check == True:
-            check_answer = self.__self_turning()
+            check_answer = self.__self_turning(msg)
         else:
             raise TypeError('"pde.Regression2().regression2()" está faltando 1 argumento posicionais requirido "self.check".')
            
@@ -654,10 +662,10 @@ class Regression2:
             return self.__define_ic_MSRes()
     
     def __define_ic_MSLoF(self): #calculates confidence interval for mslof
-        return (((self.__calculate_MSLoF()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSLof()-1)).round(2)
+        return (((self.__calculate_MSLoF()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSLof()-1)).round(4)
         
     def __define_ic_MSRes(self): #calculates confidence interval for msresN
-        return (((self.__calculate_MSres()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSres()-1)).round(2)
+        return (((self.__calculate_MSres()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSres()-1)).round(4)
     
     def plot_graphs_regression(self):
         """
@@ -714,7 +722,7 @@ class Regression2:
        
         axs3 =  fig.add_subplot(spec[2, :])
         
-        axs3.errorbar(self.X.columns,self.calculate_coefs(),self.define_ic_coefs(), fmt='^', linewidth=2, capsize=6, color='darkred')
+        axs3.errorbar(self.X.columns,self.calculate_coefs(),self.define_ic_coefs(True), fmt='^', linewidth=2, capsize=6, color='darkred')
         axs3.axhline(0,color='darkred', linestyle='dashed')
         axs3.set_ylabel('Valores dos coeficientes')
         axs3.set_xlabel('Coeficientes')
@@ -773,8 +781,41 @@ class Regression2:
         self.create_table_anova()
         self.plot_graphs_anova()
         self.plot_graphs_regression()
-
-         
+    
+    def save_dataset(self):
+        file = pd.ExcelWriter('dataset.xlsx')
+        #coeficiente e intervalo de confiança
+        coefs_ci = pd.DataFrame({'Coef': self.model_coefients(),
+                                 'coefs-ci':self.model_coefients()-self.define_ic_coefs(),
+                                 'coefs+ci':self.model_coefients()+self.define_ic_coefs(),
+                                 'C.I': self.define_ic_coefs(),}, index=self.X.columns)
+        
+        # anova
+        anova = pd.DataFrame([
+        [' Regressão: ',self.__calculate_SSreg(),self.__df_SSreg(),self.__calculate_MSreg(),self.__ftest1() ],
+        [' Resíduo: ',self.__calculate_SSres(), self.__df_SSres(),self.__calculate_MSres(),self.__ftest1()],
+        [' Total: ', self.__calculate_SSTot(), self.__df_SSTot(),self.__calculate_MSTot(), ' Teste F2 '],
+        [' Erro puro: ',self.SSPE, self.df, self.__calculate_MSPE(),self.__ftest2() ],
+        [' Falta de Ajuste: ', self.__calculate_SSLoF(), self.__df_SSLof(), self.__calculate_MSLoF(), ' F Tabelado '],
+        [' R²: ', self.__calculate_R2(), ' R: ', self.__calculate_R(), self.__ftable1() ],
+        [' R² máximo: ',self.__calculate_R2_max(), ' R máximo: ', self.__calculate_R_max(),self.__ftable2()]
+        ], columns=['Parâmetro','Soma Quadrática (SQ)','Graus de Liberdade(GL)','Média Quadrática (MQ)','Teste F1'])
+        
+        # previsto x experimental x coefs codficados
+        pred_exp = pd.DataFrame(self.__matrix_X(), columns=self.X.columns)
+        pred_exp['Experimental'] = self.y
+        pred_exp['Previsto'] = self.__calculate_pred_values()
+        
+        #savando dados em abas dentro do arquivo
+        #anova.to_excel('ANOVA.xlsx')
+        #coefs_ci.to_excel('coefs_ic.xlsx')
+        #pred_exp.to_excel('exp_pred.xlsx')
+        anova.to_excel(file,sheet_name= 'ANOVA')
+        coefs_ci.to_excel(file,sheet_name='coefs_ic')
+        pred_exp.to_excel(file,sheet_name='exp_pred')
+        return file.save()
+    
+    
     def regression2(self):
         
         """
@@ -800,7 +841,13 @@ class Regression2:
         
         df = Graus de liberdade do ponto central (type: int)
             -> Utilize pde.CP(yc,k).df_SSPE() --> help(pde.CP.df_SSPE)
-        
+          
+        ATENÇÃO! ESTE RECURSO ESTÁ AINDA EM DESENVOLVIMENTO E NÃO É FUNCIONAL QUANDO HÁ RÉPLICAS AOS DADOS!
+       auto (optional): Automatizar a exclusão dos coeficientes significantes (type: bool)
+       -> Sobre mais: help(pde.Regression2.auto).
+   
+       self_check (optional): Automatizar a verificação se há falta de ajuste do modelo através da análise de variância. 
+       -> Sobre mais: help(pde.Regression2.self_check) 
         
         Returns
         -----------
@@ -835,23 +882,24 @@ class Super_fabi:
     Coluna 4 = Valores codificados da variavel 2
     Coluna 5 = Valores reais da variavel 2
     """
-    def __init__(self, coefs:list, realmax1,realmin1,realmax2,realmin2,normmax1,normmin1,normmax2,normmin2):
+    def __init__(self, coefs:list,realmax1=None,realmin1=None,realmax2=None,realmin2=None,
+                 codmax1=None,codmin1=None,codmax2=None,codmin2=None):
         self.coefs = coefs
         self.realmax1 = realmax1
         self.realmin1 = realmin1
         self.realmax2 = realmax2
         self.realmin2 = realmin2
-        self.normmax1 = normmax1 
-        self.normmin1 = normmin1 
-        self.normmax2 = normmax2 
-        self.normmin2 = normmin2 
+        self.codmax1 = codmax1 
+        self.codmin1 = codmin1 
+        self.codmax2 = codmax2 
+        self.codmin2 = codmin2 
     
 
     def array_n1(self):
-        return np.linspace(self.normmin1 ,self.normmax1 ,num=101)
+        return np.linspace(self.codmin1 ,self.codmax1 ,num=101)
     
     def array_n2(self):
-        return np.linspace(self.normmin2,self.normmax2,num=101)
+        return np.linspace(self.codmin2,self.codmax2,num=101)
     
     def array_r1(self):
         return np.linspace(self.realmin1 ,self.realmax1 ,num=101)
@@ -859,7 +907,7 @@ class Super_fabi:
     def array_r2(self):
         return np.linspace(self.realmin2,self.realmax2,num=101)
     
-    def meshgrid_norm(self):
+    def meshgrid_cod(self):
         return np.meshgrid(self.array_n1(),self.array_n2())
     
     def meshgrid_real(self):
@@ -877,6 +925,8 @@ class Super_fabi:
         
         v2: valor(es) da variável 2 (if meshgrid is True --> type numpy.array else: type float)
         
+        n_var: número de variáveis a serem analisadas, por padrão n_var=2 
+        
         meshgrid: (optional) (if meshgrid == True --> will be  created a matrix with Z values else: returns only a item type float)
 
         manual: (optional) (if manual is True --> will be calculate z value for x and y parameters ) (type:bool)
@@ -885,17 +935,18 @@ class Super_fabi:
         b0, b1, b2, b11, b22, b12 = self.coefs
         
         
-        if manual == True: 
-            if x == None or y == None:
+        if manual == True: # if manual mode to be activate
+            if x == None or y == None: # check parameters for manual mode
                 raise TypeError('recalculate_coefs() está faltando 2 argumentos posicionais requirido "x" e "y".')
             else:       
-                return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
+                    return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
+                    
         elif meshgrid == None and manual == False:
             raise TypeError('Insira parâmetros ao método.')
             
         try:
             if meshgrid == True:
-                x, y = self.meshgrid_norm()
+                x, y = self.meshgrid_cod()
                 return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
             elif meshgrid == False:
                 x, y = self.array_n1(), self.array_n2()
@@ -908,7 +959,7 @@ class Super_fabi:
         return idx1[0],idx2[0]  
     
     @property
-    def maxnorm(self):
+    def maxcod(self):
         """Retorna valores das coordenadas do sinal máximo para as variáveis codificadas.
         
         Returns 
@@ -918,7 +969,7 @@ class Super_fabi:
         
         """
         idx1, idx2 = self.__index_max_values()[0], self.__index_max_values()[1]
-        v2, v1 =  self.meshgrid_norm()[0], self.meshgrid_norm()[1]
+        v2, v1 =  self.meshgrid_cod()[0], self.meshgrid_cod()[1]
         return v1[idx2][idx1], v2[idx2][idx1]
     
     @property
@@ -972,11 +1023,9 @@ class Super_fabi:
         
         V1, V2= self.meshgrid_real()
         Z = self.z(meshgrid=True)
-        #b0, b1, b2, b11, b22, b12 = self.coefs
-        
+        b0, b1, b2, b11, b22, b12 = self.coefs
         
         surf =  ax1.plot_surface(V1, V2, Z, rstride=1, cstride=1,cmap='viridis', edgecolor='none')
-        #fig.colorbar(surf, shrink=.5,aspect=5,anchor=(0.5,0.5),pad =.17)
         
         ax1.set_title('Superfície de Resposta do Modelo',fontsize=12, fontweight='black',y=1,x=.55)
         ax1.set_xlabel('Variável 1')
@@ -984,14 +1033,13 @@ class Super_fabi:
         ax1.set_zlabel('Resposta do Modelo')
         
         # Contorno 
-        v1, v2= self.meshgrid_norm()
+        v1, v2= self.meshgrid_cod()
         
         ax2 = fig.add_subplot(1,2,2)
         
-        #cs = plt.contourf(X,Y, self.z(meshgrid=True), levels=np.linspace(Z.min(),Z.max(),num=7),linewidths='solid',linestyles='solid',antialiased=True)
         contours = ax2.contour(v1, v2, Z, 3,colors='black', levels=6)
         ax2.clabel(contours, inline=True, fontsize=12)
-        plt.imshow(Z, extent=[self.normmin1, self.normmax1, self.normmax2, self.normmin2], origin='lower', cmap='viridis', alpha=1)
+        plt.imshow(Z, extent=[self.codmin1, self.codmax1, self.codmax2, self.codmin2],  cmap='viridis', alpha=1)
         plt.colorbar(aspect=6, pad=.15)
         
         
@@ -1000,21 +1048,90 @@ class Super_fabi:
                 ax2.scatter(matrix_X['b1'],matrix_X['b2'], color='w',marker=(5, 1),s=50)
                 self.__etiqueta(matrix_X, vector_y, ax2)
         
-        ax2.scatter(self.maxnorm[0], self.maxnorm[1], color='darkred',marker=(5, 1),s=100)   
-        ax2.annotate(r'$z_{max}= %.2f$'%self.zmax, (self.maxnorm[0], self.maxnorm[1]),color='k')
+        ax2.scatter(self.maxcod[0], self.maxcod[1], color='darkred',marker=(5, 1),s=100)   
+        ax2.annotate(r'$z_{max}= %.2f$'%self.zmax, (self.maxcod[0], self.maxcod[1]),color='k')
         
-        ax2.set_xticks(np.array([-2**.5,int(-1),int(0),int(1),2**.5,self.maxnorm[0]]).round(2))
-        ax2.set_yticks(np.array([-2**.5,int(-1),int(0),int(1),2**.5,self.maxnorm[1]]).round(2))
+        ax2.set_xticks(list(np.arange(self.codmin1,round((2*self.codmax1),4),step=self.codmax1)) + [round(self.maxcod[0],3)])
+        ax2.set_yticks(list(np.arange(self.codmin2,round((2*self.codmax2),4),step=self.codmax2)) + [round(self.maxcod[1],3)])
         ax2.set_xlabel('Variável 1')
         ax2.set_ylabel('Variável 2')
         ax2.set_title('Contorno do Modelo',fontsize=12, fontweight='black',y=1.1)
         
-        fig.text(0.2,.71,r'$R_{max}(%.2f,%.2f) = %.1f\qquad\qquad\qquad  v_1^{max} = %.1f \quad e\quad v_2^{max} = %.1f $'%(self.maxnorm[0],self.maxnorm[1],self.zmax,self.maxreal[0],self.maxreal[1]),
+        fig.text(0.2,.71,r'$R_{max}(%.2f,%.2f) = %.1f\qquad\qquad\qquad  v_1^{max} = %.1f \quad e\quad v_2^{max} = %.1f $'%(self.maxcod[0],self.maxcod[1],self.zmax,self.maxreal[0],self.maxreal[1]),
                  fontsize=15,horizontalalignment='left')
         plt.suptitle(r'$\bfResposta = {} + {}v_1 + {}v_2 + {}v_1^2 + {}v_2^2 + {}v_1v_2 $'.format(b0, b1, b2, b11, b22, b12),y=.77,x=.45,fontsize=20)
         
-        
-     
-        
         plt.tight_layout(w_pad=5)
         plt.show()
+        
+    def solver_diff(self, k=2, prinf=False):
+        """Método que retorna o valor máximo de resposta e os respectivos valores codificados das variáveis exploratórias do modelo através dos cálculos das derivada parciais de primeira ordem. 
+        Selecione o número de variáveis através do parâmetro k. 
+        Esta função é capaz de calcular para modelos com 2,3 ou 4 variáveis. 
+
+        Parameters
+        ------------
+
+        k: número de variáveis do modelo (type: int)
+
+        printf (optional): Por padrão (False), será retornado valores de coordendas e resposta máxima em uma tupla e quando printf=True será retornado uma mensagem com as resposta em um display em linguagem Latex. 
+
+        Returns
+        ------------
+        Retorna valores das coordenadas exploratórias para o máximo global do modelo através da derivada parcial.
+        """
+        v1,v2,v3,v4 = symbols('v1 v2 v3 v4', real=True) 
+        try:
+            if k == 2:           
+                b0, b1, b2, b11, b22, b12 = self.coefs
+                f = b0 + b1*v1 + b2*v2 + b11*v1**2 + b22*v2**2 + b12*v1*v2
+                fprimev1 = diff(f,v1)
+                fprimev2 = diff(f,v2)
+                fmax = f.subs([(v1,solve(fprimev1,v1)[0]),(v2,solve(fprimev2,v2)[0])])
+                if prinf == False:    
+                    return (solve(fprimev1,v1)[0],solve(fprimev2,v2)[0],fmax)
+
+                else:
+                    return display(Latex("$$f'({0:.4f},{1:.4f})= {2:.2f}$$".format(solve(fprimev1,v1)[0],
+                                                                                  solve(fprimev2,v2)[0],
+                                                                                  fmax)))
+            elif k == 3:   
+                b0, b1, b2, b3, b11, b22, b33, b12, b13, b23 = self.coefs
+                f = b0 + b1*v1 + b2*v2 + b3*v3 + b11*v1**2 + b22*v2**2 + b33*v3**2 + b12*v1*v2 + b13*v1*v3 + b23*v2*v3
+                fprimev1 = diff(f,v1)
+                fprimev2 = diff(f,v2)
+                fprimev3 = diff(f,v3)
+                fmax =  f.subs([(v1,solve(fprimev1,v1)[0]),(v2,solve(fprimev2,v2)[0]),(v3,solve(fprimev3,v3)[0])])
+                if prinf == False:    
+                    return (solve(fprimev1,v1)[0],
+                            solve(fprimev2,v2)[0],
+                            solve(fprimev3,v3)[0],
+                            fmax)
+                else:
+                    return display(Latex("$$f'({0:.4f},{1:.4f},{2:.4f})= {3:.2f}$$".format(solve(fprimev1,v1)[0],
+                                                                                           solve(fprimev2,v2)[0],
+                                                                                           solve(fprimev3,v3)[0],
+                                                                                           fmax)))
+            elif k == 4:  
+                b0, b1, b2, b3, b4, b11, b22, b33, b44, b12, b13, b14, b23, b24, b34 = self.coefs
+
+                f=b0+b1*v1+b2*v2+b3*v3+b4*v4+b11*v1**2+b22*v2**2+b33*v3**2+b44*v4**2
+                +b12*v1*v2+b13*v1*v3+b14*v1*v4+b23*v2*v3+b24*v2*v4+b34*v3*v4
+                fprimev1 = diff(f,v1)
+                fprimev2 = diff(f,v2)
+                fprimev3 = diff(f,v3)
+                fprimev4 = diff(f,v4)
+                fmax=f.subs([(v1,solve(fprimev1,v1)[0]),(v2,solve(fprimev2,v2)[0]),(v3,solve(fprimev3,v3)[0]),(v4,solve(fprimev4,v4)[0])])
+                if prinf == False:    
+                    return (solve(fprimev1,v1)[0],
+                            solve(fprimev2,v2)[0],
+                            solve(fprimev3,v3)[0],
+                            solve(fprimev4,v4)[0],
+                            fmax)
+                else:
+                    return display(Latex("$$f'({0:.4f},{1:.4f},{2:.4f},{3:.4f})= {4:.2f}$$".format(solve(fprimev1,v1)[0],
+                                                                                                   solve(fprimev2,v2)[0],
+                                                                                                   solve(fprimev3,v3)[0],
+                                                                                                   solve(fprimev4,v4)[0],
+                                                                                                   fmax)))
+        except: raise TypeError(f'Não há registro para solução da equação para "k == {k}"')
