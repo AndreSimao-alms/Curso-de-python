@@ -393,7 +393,7 @@ class Regression2:
     
     def calculate_coefs(self):
         """Retorna a soma dos resultado da definição "__matrix_coef" """
-        return np.einsum('ij->j', self.__calculate_matrix_coef()).round(2)
+        return np.einsum('ij->j', self.__calculate_matrix_coef()).round(5)
     
     
     def __calculate_pred_values(self):
@@ -739,8 +739,8 @@ class Regression2:
     
     def dict_coefs_ci(self): #list with dicts {'coefs':values,'coefs_max':values,'coefs_min':values}
         return  [dict(zip(self.X.columns, self.calculate_coefs())),
-                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[0].round(2))),
-                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[1].round(2)))]
+                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[0].round(4))),
+                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[1].round(4)))]
     
     def recalculate_coefs(self):  #returns an array with coefs values and coefs insignificants equal zero 
         """Retorna um DataFrame com os coeficientes significantes"""
@@ -1064,7 +1064,8 @@ class Super_fabi:
         plt.tight_layout(w_pad=5)
         plt.show()
         
-    def solver_diff(self, k=2, prinf=False):
+
+    def solver_diff(self, k=2, printf=False):
         """Método que retorna o valor máximo de resposta e os respectivos valores codificados das variáveis exploratórias do modelo através dos cálculos das derivada parciais de primeira ordem. 
         Selecione o número de variáveis através do parâmetro k. 
         Esta função é capaz de calcular para modelos com 2,3 ou 4 variáveis. 
@@ -1072,7 +1073,7 @@ class Super_fabi:
         Parameters
         ------------
 
-        k: número de variáveis do modelo (type: int)
+        k: número de variáveis do modelo (type: int) 
 
         printf (optional): Por padrão (False), será retornado valores de coordendas e resposta máxima em uma tupla e quando printf=True será retornado uma mensagem com as resposta em um display em linguagem Latex. 
 
@@ -1081,57 +1082,63 @@ class Super_fabi:
         Retorna valores das coordenadas exploratórias para o máximo global do modelo através da derivada parcial.
         """
         v1,v2,v3,v4 = symbols('v1 v2 v3 v4', real=True) 
+        init_printing(use_unicode=True)
         try:
             if k == 2:           
                 b0, b1, b2, b11, b22, b12 = self.coefs
                 f = b0 + b1*v1 + b2*v2 + b11*v1**2 + b22*v2**2 + b12*v1*v2
-                fprimev1 = diff(f,v1)
-                fprimev2 = diff(f,v2)
-                fmax = f.subs([(v1,solve(fprimev1,v1)[0]),(v2,solve(fprimev2,v2)[0])])
-                if prinf == False:    
-                    return (solve(fprimev1,v1)[0],solve(fprimev2,v2)[0],fmax)
+                X = np.matrix([
+                     [2*b11,b12],
+                     [b12,2*b22]])
+                y = -np.array(self.coefs[1:3])
 
+                p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y multiplicação de matriz e vetor (v1,v2,v3,v4)
+                fmax = f.subs([(v1,p_diff[0]),(v2,p_diff[1])])
+
+                resultados = np.append(p_diff,fmax)
+                
+                if printf == False:
+                    return pd.DataFrame({'Resultados':resultados},index=['b1','b2','Resposta'])
                 else:
-                    return display(Latex("$$f'({0:.4f},{1:.4f})= {2:.2f}$$".format(solve(fprimev1,v1)[0],
-                                                                                  solve(fprimev2,v2)[0],
-                                                                                  fmax)))
+                    return display(Latex("$$f'({0:.3f},{1:.3f})= {2:.2f}$$".format(p_diff[0],p_diff[1],fmax)))
+
             elif k == 3:   
                 b0, b1, b2, b3, b11, b22, b33, b12, b13, b23 = self.coefs
                 f = b0 + b1*v1 + b2*v2 + b3*v3 + b11*v1**2 + b22*v2**2 + b33*v3**2 + b12*v1*v2 + b13*v1*v3 + b23*v2*v3
-                fprimev1 = diff(f,v1)
-                fprimev2 = diff(f,v2)
-                fprimev3 = diff(f,v3)
-                fmax =  f.subs([(v1,solve(fprimev1,v1)[0]),(v2,solve(fprimev2,v2)[0]),(v3,solve(fprimev3,v3)[0])])
-                if prinf == False:    
-                    return (solve(fprimev1,v1)[0],
-                            solve(fprimev2,v2)[0],
-                            solve(fprimev3,v3)[0],
-                            fmax)
+                X = np.matrix([
+                     [2*b11,b12,b13],
+                     [b12,2*b22,b23],
+                     [b13,b23,2*b33]])
+                y = -np.array(self.coefs[1:4])
+
+                p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y multiplicação de matriz e vetor (v1,v2,v3,v4)
+                fmax = f.subs([(v1,p_diff[0]),(v2,p_diff[1]),(v3,p_diff[2])])
+
+                resultados = np.append(p_diff,fmax)
+
+                if printf == False:
+                    return pd.DataFrame({'Resultados':resultados},index=['b1','b2','b3','Resposta'])
                 else:
-                    return display(Latex("$$f'({0:.4f},{1:.4f},{2:.4f})= {3:.2f}$$".format(solve(fprimev1,v1)[0],
-                                                                                           solve(fprimev2,v2)[0],
-                                                                                           solve(fprimev3,v3)[0],
-                                                                                           fmax)))
+                    return display(Latex("$$f'({0:.3f},{1:.3f},{2:.3f})= {3:.2f}$$".format(p_diff[0],p_diff[1],p_diff[2],fmax)))
+
             elif k == 4:  
                 b0, b1, b2, b3, b4, b11, b22, b33, b44, b12, b13, b14, b23, b24, b34 = self.coefs
+                f=b0+b1*v1+b2*v2+b3*v3+b4*v4+b11*v1**2+b22*v2**2+b33*v3**2+b44*v4**2+b12*v1*v2+b13*v1*v3+b14*v1*v4+b23*v2*v3+b24*v2*v4+b34*v3*v4
+                X = np.matrix([
+                     [2*b11,b12,b13,b14],
+                     [b12,2*b22,b23,b24],
+                     [b13,b23,2*b33,b34],
+                     [b14,b24,b34,2*b44]])
+                y = -np.array(self.coefs[1:5])
 
-                f=b0+b1*v1+b2*v2+b3*v3+b4*v4+b11*v1**2+b22*v2**2+b33*v3**2+b44*v4**2
-                +b12*v1*v2+b13*v1*v3+b14*v1*v4+b23*v2*v3+b24*v2*v4+b34*v3*v4
-                fprimev1 = diff(f,v1)
-                fprimev2 = diff(f,v2)
-                fprimev3 = diff(f,v3)
-                fprimev4 = diff(f,v4)
-                fmax=f.subs([(v1,solve(fprimev1,v1)[0]),(v2,solve(fprimev2,v2)[0]),(v3,solve(fprimev3,v3)[0]),(v4,solve(fprimev4,v4)[0])])
-                if prinf == False:    
-                    return (solve(fprimev1,v1)[0],
-                            solve(fprimev2,v2)[0],
-                            solve(fprimev3,v3)[0],
-                            solve(fprimev4,v4)[0],
-                            fmax)
+                p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y multiplicação de matriz e vetor (v1,v2,v3,v4)
+                fmax = f.subs([(v1,p_diff[0]),(v2,p_diff[1]),(v3,p_diff[2]),(v4,p_diff[3])])
+
+                resultados = np.append(p_diff,fmax)
+
+                if printf == False:
+                    return pd.DataFrame( {'Resultados':resultados},index=['b1','b2','b3','b4','Resposta'])
                 else:
-                    return display(Latex("$$f'({0:.4f},{1:.4f},{2:.4f},{3:.4f})= {4:.2f}$$".format(solve(fprimev1,v1)[0],
-                                                                                                   solve(fprimev2,v2)[0],
-                                                                                                   solve(fprimev3,v3)[0],
-                                                                                                   solve(fprimev4,v4)[0],
-                                                                                                   fmax)))
+                    return display(Latex("$$f'({0:.4f},{1:.3f},{2:.3f},{3:.3f})= {4:.2f}$$".format(p_diff[0],p_diff[1],p_diff[2],
+                                                                                                   p_diff[3],fmax)))
         except: raise TypeError(f'Não há registro para solução da equação para "k == {k}"')
