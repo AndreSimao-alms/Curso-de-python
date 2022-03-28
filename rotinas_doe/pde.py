@@ -15,8 +15,7 @@ from IPython.display import display, Latex
 import sys
 #class Super_fabi
 #from sympy import symbols,diff,solve,subs 
-from sympy import *
-
+from sympy import symbols
 
 class Fabi_efeito:
     
@@ -1082,7 +1081,7 @@ class Super_fabi:
         Retorna valores das coordenadas exploratórias para o máximo global do modelo através da derivada parcial.
         """
         v1,v2,v3,v4 = symbols('v1 v2 v3 v4', real=True) 
-        init_printing(use_unicode=True)
+        
         try:
             if k == 2:           
                 b0, b1, b2, b11, b22, b12 = self.coefs
