@@ -42,11 +42,12 @@ Disponível em <https://www.youtube.com/c/EdenirPereiraFilho>.
 | Vídeo 5 | Seção 1 | Parte 3 | Strings 2 |
 | Vídeo 6 | Seção 1 | Parte 4 | Strings Desafio |
 | Vídeo 7 | Seção 1 | Parte 6 | Dicionários: abordagem breve |
-| Vídeo 9 | Seção 1 | Parte 7 | Função print(): concatenadores de variáveis |
-| Vídeo 10 | Seção 1 | Parte 8 | Função input() 1 |
-| Vídeo 11 | Seção 1 | Parte 9 | Função input() 2 |
-| Vídeo 12 | Seção 1 | Parte 10 | Desafio 1 |
-| Vídeo 13 | Seção 1 | Parte 11 | Desafio 2 |
+| Vídeo 7 | Seção 1 | Parte 7 | Dicionários: abordagem breve |
+| Vídeo 9 | Seção 1 | Parte 8 | Função print(): concatenadores de variáveis |
+| Vídeo 10 | Seção 1 | Parte 9 | Função input() 1 |
+| Vídeo 11 | Seção 1 | Parte 10 | Função input() 2 |
+| Vídeo 12 | Seção 1 | Parte 11 | Desafio 1 |
+| Vídeo 13 | Seção 1 | Parte 12 | Desafio 2 |
 | Vídeo 14 | Seção 2 | Parte 1 | Comando if, elif e else |
 | Vídeo 15 | Seção 2 | Parte 2 | Exemplo 3: equação polinomial de segundo grau |
 | Vídeo 16 | Seção 2 | Parte 3 | Desafio 1 | 
